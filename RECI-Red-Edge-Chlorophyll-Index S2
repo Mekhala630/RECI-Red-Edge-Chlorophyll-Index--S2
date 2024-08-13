@@ -1,0 +1,38 @@
+Map.centerObject(table,12)
+
+var Sentinel2Collection= ee.ImageCollection("COPERNICUS/S2_SR")
+.filter(ee.Filter.date("2020-01-01","2022-12-31"))
+.filterBounds(table)
+.filter(ee.Filter.lte("CLOUD_COVERAGE_ASSESSMENT", 10));
+
+
+
+
+var withre = Sentinel2Collection.map(function(image) {
+  var RECI = image.expression(
+    '(float(float(RE3/RE1)-1))', {
+      'RE3': image.select("B7").divide(10000),
+      'RE1': image.select("B5").divide(10000)
+}).rename('RECI');
+  return image.addBands(RECI);
+});
+
+var RECI=withre.select('RECI')
+print(RECI)
+
+
+
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection:RECI,
+  regions: table,
+  reducer: ee.Reducer.mean(),
+  scale: 10,
+  seriesProperty:"Name"
+}).setOptions({
+      lineWidth: 1,
+      title: 'RECI Time Series',
+      interpolateNulls: true,
+      vAxis: {title: 'RECI'},
+      hAxis: {title: '', format: 'dd-MMM-YYYY'}
+    })
+print(chart);
